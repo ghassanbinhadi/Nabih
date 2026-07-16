@@ -1,2 +1,2 @@
 # Nabih (نبيه)
-**[nabih.github.io →](https://<user>.github.io/nabih/)**
+**[nabih.github.io →](https://<user>.github.io/nabih/index.html)**

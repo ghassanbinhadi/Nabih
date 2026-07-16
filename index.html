@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nabih: Finding the minutes a student stopped listening</title>
+<meta name="description" content="Nabih finds the minutes a student stopped listening in a lecture, from their heartbeat, then writes those minutes back as a short lesson. KAUST Academy. In development.">
+
+<meta property="og:title" content="Nabih">
+<meta property="og:description" content="Finding the minutes a student stopped listening, from their heartbeat. In development.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#070C16">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     Nabih: landing
+     Palette is built from the project's own instrument:
+     a deep navy ground (carried from the KAUST report's #133C6A),
+     a near-white signal, and exactly one saturated colour (amber)
+     spent only on the thing the system exists to find: the lapse.
+     ============================================================ */
+  :root{
+    --ground:  #070C16;
+    --panel:   #0C1524;
+    --rule:    #182741;
+    --rule-lo: #101B2E;
+    --text:    #EEF2F9;
+    --muted:   #74869F;
+    --blue:    #3D7FCC;
+    --flag:    #FFA23A;
+
+    --shell: min(1080px, 100% - 3rem);
+    --step:  clamp(1.1rem, 3.4vw, 1.9rem);
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+  html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+
+  body{
+    background:var(--ground);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  /* faint field, so the ground reads as instrument glass rather than flat black */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(1100px 620px at 50% -12%, rgba(61,127,204,.13), transparent 68%),
+      radial-gradient(760px 420px at 88% 8%, rgba(255,162,58,.045), transparent 62%);
+  }
+
+  .shell{ position:relative; z-index:1; width:var(--shell); margin-inline:auto; }
+
+  .mono{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:.688rem; letter-spacing:.16em; text-transform:uppercase;
+  }
+
+  /* ---------------- top bar ---------------- */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:1rem; flex-wrap:wrap;
+    padding:1.5rem 0; color:var(--muted);
+  }
+  .topbar .brand{ color:var(--text); font-weight:500; letter-spacing:.22em; }
+
+  .live{ display:inline-flex; align-items:center; gap:.5rem; color:var(--flag); }
+  .live .dot{
+    width:6px; height:6px; border-radius:50%; background:var(--flag); flex:none;
+    animation:beat 1.15s ease-out infinite;
+  }
+  @keyframes beat{
+    0%,70%,100%{ transform:scale(1);   opacity:.4 }
+    8%         { transform:scale(2.1); opacity:1  }
+    24%        { transform:scale(1);   opacity:.4 }
+  }
+
+  /* ---------------- hero ---------------- */
+  .hero{ padding:clamp(3rem,9vw,6.5rem) 0 0; }
+
+  .wordmark{
+    font-family:'Instrument Sans',sans-serif;
+    font-weight:600;
+    font-size:clamp(4.2rem,15.5vw,11rem);
+    line-height:.82;
+    letter-spacing:-.055em;
+    color:var(--text);
+  }
+  .wordmark span{ color:var(--blue); }
+
+  .lede{
+    font-family:'Instrument Sans',sans-serif;
+    font-weight:400;
+    font-size:clamp(1.25rem,3.1vw,2rem);
+    line-height:1.32;
+    letter-spacing:-.02em;
+    max-width:22ch;
+    margin-top:var(--step);
+    color:var(--text);
+  }
+  .lede b{ color:var(--flag); font-weight:400; }
+
+  .sub{
+    font-size:clamp(.95rem,1.5vw,1.06rem);
+    color:var(--muted);
+    max-width:52ch;
+    margin-top:1.1rem;
+  }
+
+  /* ---------------- signature: the interval strip ---------------- */
+  .strip{ margin-top:clamp(2.6rem,6vw,4.4rem); }
+
+  .strip-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    gap:1rem; flex-wrap:wrap;
+    color:var(--muted); margin-bottom:.85rem;
+  }
+  .strip-label .what{ color:var(--text); }
+
+  .strip-frame{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--rule);
+    border-radius:3px;
+    padding:0;
+    overflow:hidden;
+  }
+  .strip-frame svg{
+    display:block; width:100%;
+    height:clamp(96px,14vw,132px);
+  }
+
+  .tick{
+    stroke:var(--text); stroke-width:1.6; stroke-linecap:round;
+    vector-effect:non-scaling-stroke;
+    opacity:0;
+    animation:land .34s ease-out forwards;
+  }
+  .tick.flag{ stroke:var(--flag); }
+  @keyframes land{ to{ opacity:.92 } }
+
+  .zone{ fill:var(--flag); opacity:0; animation:zone .5s ease-out .95s forwards; }
+  @keyframes zone{ to{ opacity:.07 } }
+
+  .zone-edge{
+    stroke:var(--flag); stroke-width:1; stroke-dasharray:2 4; opacity:0;
+    animation:edge .5s ease-out .95s forwards;
+  }
+  @keyframes edge{ to{ opacity:.55 } }
+
+  .axis{ stroke:var(--rule); stroke-width:1; }
+
+  .strip-foot{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:.75rem;
+    padding:.7rem .9rem;
+    border-top:1px solid var(--rule-lo);
+    color:var(--muted);
+  }
+  .strip-foot .mid{ color:var(--flag); }
+
+  .strip-note{
+    margin-top:.9rem; font-size:.83rem; color:var(--muted); max-width:62ch;
+  }
+
+  /* ---------------- section scaffolding ---------------- */
+  .rule{
+    display:flex; align-items:center; gap:1rem;
+    margin-top:clamp(4rem,9vw,6.5rem);
+    color:var(--muted);
+  }
+  .rule::after{ content:""; flex:1; height:1px; background:var(--rule); }
+
+  /* ---------------- status ---------------- */
+  .status{
+    margin-top:1.4rem;
+    border:1px solid var(--rule);
+    border-left:2px solid var(--flag);
+    border-radius:3px;
+    background:var(--panel);
+    padding:clamp(1.3rem,3vw,1.9rem);
+  }
+  .status .head{ color:var(--flag); margin-bottom:.9rem; }
+  .status p{ color:var(--muted); max-width:66ch; }
+  .status p + p{ margin-top:.85rem; }
+  .status strong{ color:var(--text); font-weight:500; }
+
+  /* ---------------- pipeline ---------------- */
+  .layers{ margin-top:1.4rem; border-top:1px solid var(--rule-lo); }
+  .row{
+    display:grid;
+    grid-template-columns:2.6rem 8.5rem 1fr;
+    gap:1.25rem; align-items:baseline;
+    padding:1.05rem .25rem;
+    border-bottom:1px solid var(--rule-lo);
+    transition:background .18s ease;
+  }
+  .row:hover{ background:rgba(61,127,204,.045); }
+  .row .n{
+    font-family:'JetBrains Mono',monospace; font-size:.688rem;
+    color:var(--blue); letter-spacing:.1em;
+  }
+  .row .name{
+    font-family:'Instrument Sans',sans-serif; font-weight:500;
+    font-size:1.02rem; letter-spacing:-.01em; color:var(--text);
+  }
+  .row .desc{ font-size:.94rem; color:var(--muted); }
+  .row .desc code{
+    font-family:'JetBrains Mono',monospace; font-size:.8rem;
+    color:var(--blue); background:rgba(61,127,204,.1);
+    border:1px solid rgba(61,127,204,.18);
+    padding:.08rem .34rem; border-radius:2px;
+  }
+  .row.is-flag .name{ color:var(--flag); }
+
+  /* ---------------- name ---------------- */
+  .name-block{ margin-top:1.4rem; display:grid; gap:1.5rem; }
+  @media (min-width:760px){
+    .name-block{ grid-template-columns:1fr 1fr; gap:2.6rem; }
+  }
+  .name-block p{
+    font-family:'Instrument Sans',sans-serif;
+    font-weight:400;
+    font-size:clamp(1.05rem,2vw,1.3rem);
+    line-height:1.5; letter-spacing:-.014em;
+    color:var(--text);
+  }
+  .name-block .gloss{ font-size:.94rem; color:var(--muted); line-height:1.62;
+    font-family:'Inter',sans-serif; letter-spacing:0; }
+  .name-block .gloss + .gloss{ margin-top:.8rem; }
+  .root{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--blue); font-size:.92em; letter-spacing:.06em;
+  }
+  .term{ color:var(--flag); font-style:normal; }
+
+  /* ---------------- footer ---------------- */
+  footer{
+    margin-top:clamp(4rem,9vw,6.5rem);
+    padding:1.6rem 0 3.4rem;
+    border-top:1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:center;
+    gap:1rem; flex-wrap:wrap;
+    color:var(--muted);
+  }
+  footer a{
+    color:var(--text); text-decoration:none;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:2px;
+    transition:color .18s, border-color .18s;
+  }
+  footer a:hover{ color:var(--flag); border-color:var(--flag); }
+  footer a:focus-visible{ outline:2px solid var(--blue); outline-offset:4px; }
+
+  @media (max-width:640px){
+    :root{ --shell:min(1080px, 100% - 2.25rem); }
+    .row{ grid-template-columns:2.2rem 1fr; row-gap:.28rem; }
+    .row .desc{ grid-column:2; }
+    .lede{ max-width:16ch; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation:none !important; transition:none !important; }
+    .tick{ opacity:.92; }
+    .zone{ opacity:.07; }
+    .zone-edge{ opacity:.55; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar mono">
+    <span class="brand">Nabih</span>
+    <span class="live"><span class="dot" aria-hidden="true"></span>In development</span>
+  </div>
+
+  <header class="hero">
+    <h1 class="wordmark">Nabih<span>.</span></h1>
+
+    <p class="lede">Finding the minutes a student <b>stopped listening</b>.</p>
+
+    <p class="sub">
+      From the heartbeat on their wrist, then writing those minutes back as a short lesson.
+      The heart answers to the autonomic nervous system: it can't be performed like a face,
+      and it doesn't interrupt like a survey.
+    </p>
+
+    <!-- Signature: not a pretty ECG squiggle. Each line is one heartbeat, and the
+         only thing that changes is the gap between them, which is precisely what
+         heart rate variability is, and precisely what the model reads. -->
+    <section class="strip" aria-labelledby="strip-h">
+      <div class="strip-label mono">
+        <span class="what" id="strip-h">One lecture · one heartbeat per line</span>
+        <span>Spacing = variability</span>
+      </div>
+
+      <div class="strip-frame">
+        <svg viewBox="0 0 1000 120" preserveAspectRatio="none" role="img"
+             aria-label="Fifty minutes of a lecture, drawn as one vertical line per heartbeat. The gaps between lines vary naturally for most of the lecture. Across one stretch in the middle the gaps become mechanically even, and that stretch is marked in amber as a detected lapse in attention.">
+          <rect class="zone" x="452" y="0" width="196" height="120"></rect>
+          <line class="zone-edge" x1="452" y1="0" x2="452" y2="120"></line>
+          <line class="zone-edge" x1="648" y1="0" x2="648" y2="120"></line>
+          <line class="axis" x1="0" y1="60" x2="1000" y2="60"></line>
+          <g id="ticks"></g>
+        </svg>
+
+        <div class="strip-foot mono">
+          <span>00:00</span>
+          <span class="mid">Lapse · 24:10 to 25:50</span>
+          <span>50:00</span>
+        </div>
+      </div>
+
+      <p class="strip-note">
+        Illustrative. Real traces go here once the evaluation is done.
+      </p>
+    </section>
+  </header>
+
+  <div class="rule mono">Status</div>
+  <section class="status">
+    <div class="head mono">Building. No results yet</div>
+    <p>
+      The pipeline is being implemented now. Nothing is claimed here until it has been measured.
+    </p>
+    <p>
+      <strong>Results will be published on this page when the evaluation is finished</strong>:
+      scored on students the model has never seen, and printed next to the score you'd get by
+      guessing the most common answer. A number without that comparison isn't a number.
+    </p>
+  </section>
+
+  <div class="rule mono">Pipeline</div>
+  <div class="layers">
+    <div class="row">
+      <span class="n">01</span>
+      <span class="name">Sensing</span>
+      <span class="desc">A wearable records the heartbeat across the lecture</span>
+    </div>
+    <div class="row">
+      <span class="n">02</span>
+      <span class="name">Features</span>
+      <span class="desc">Beats located, gaps measured, <code>HRV</code> over 60-second windows</span>
+    </div>
+    <div class="row">
+      <span class="n">03</span>
+      <span class="name">Affect</span>
+      <span class="desc">A <code>Random Forest</code> classifies each window's emotional state</span>
+    </div>
+    <div class="row is-flag">
+      <span class="n">04</span>
+      <span class="name">Attention</span>
+      <span class="desc">Emotional state becomes an engaged or disengaged call</span>
+    </div>
+    <div class="row">
+      <span class="n">05</span>
+      <span class="name">Lesson</span>
+      <span class="desc">An <code>LLM</code> writes the missed minutes back into a short lesson</span>
+    </div>
+  </div>
+
+  <div class="rule mono">On the name</div>
+  <section class="name-block">
+    <p>
+      <em class="root">n-b-h</em>, an Arabic root that holds both halves of this system at once:
+      <em class="term">intibāh</em>, the attention it measures, and <em class="term">tanbīh</em>,
+      the alert it sends back.
+    </p>
+    <div>
+      <p class="gloss">
+        <em>Nabih</em> is the adjective from that root: alert, quick to notice, the one who
+        catches what others miss.
+      </p>
+      <p class="gloss">
+        One word for the input and the output.
+      </p>
+    </div>
+  </section>
+
+  <footer class="mono">
+    <span>KAUST Academy · 2026</span>
+    <span><a href="https://github.com/kaust-academy/nabih">Repository →</a></span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var g = document.getElementById('ticks');
+  if(!g) return;
+
+  var W = 1000, TOP = 26, BOT = 94;
+  var A = 452, B = 648;              // the flagged stretch
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var xs = [], x = 6, i = 0;
+  while(x < W - 4){
+    xs.push(x);
+    var inLapse = (x > A && x < B);
+    // Engaged: the gaps breathe, and that irregularity is healthy variability.
+    // Lapse: the gaps go mechanical. Low variability, drawn honestly as evenness.
+    x += inLapse ? 15.2
+                 : 17 + Math.sin(i * 0.9) * 4.4 + Math.sin(i * 0.31) * 3.1;
+    i++;
+  }
+
+  var ns = 'http://www.w3.org/2000/svg';
+  var frag = document.createDocumentFragment();
+
+  xs.forEach(function(px, k){
+    var inLapse = (px > A && px < B);
+    var l = document.createElementNS(ns, 'line');
+    l.setAttribute('class', 'tick' + (inLapse ? ' flag' : ''));
+    l.setAttribute('x1', px.toFixed(1)); l.setAttribute('x2', px.toFixed(1));
+    l.setAttribute('y1', TOP);           l.setAttribute('y2', BOT);
+    if(!reduce){
+      // one orchestrated sweep on load, left to right
+      l.style.animationDelay = (k * 0.014).toFixed(3) + 's';
+    }
+    frag.appendChild(l);
+  });
+
+  g.appendChild(frag);
+})();
+</script>
+</body>
+</html>
